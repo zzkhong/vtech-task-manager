@@ -5,12 +5,13 @@ export const purplePrimary = '#9000ff';
 export const purpleSecondary = '#eed9ff';
 
 export const greenPrimary = '#64bc00';
-export const greenSecondary = 'e5ffc8';
+export const greenSecondary = '#e5ffc8';
 
 export const orangePrimary = '#ff8400';
 export const orangeSecondary = '#ffdfbc';
 
-export const textPrimary = '#111111';
-export const textSecondary = '#a9a9a9';
+export const textPrimary = '#000';
+export const textSecondary = '#aeaeae';
 
-export const background = '#f5f5f5';
+export const white = '#fff';
+export const error = '#ff5656';

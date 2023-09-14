@@ -9,7 +9,7 @@
       "modules/*": ["modules/*"],
       "routes/*": ["routes/*"],
       "styles/*": ["styles/*"],
-      "utils/*": ["utils/*"]
+      "assets/*": ["assets/*"]
     },
 
     "strict": true,

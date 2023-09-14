@@ -10,11 +10,18 @@ export type ThemeColorMap = {
 // Task Slice
 export type TaskStatus = 'running' | 'completed';
 
+export interface TaskLookup {
+  id: string;
+  name: string;
+}
+
 export interface Task {
   id: string;
   name: string;
   status?: TaskStatus;
   remark?: string;
-  createdAt: number;
+  startAt: number;
+
+  parent?: TaskLookup;
   subtasks?: Task[];
 }

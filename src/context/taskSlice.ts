@@ -17,7 +17,7 @@ const useTaskStore = create<TaskState>(set => ({
       const newTask = {
         id: uuid.v4().toString(),
         name: taskName,
-        createdAt: dayjs().unix(),
+        startAt: dayjs().unix(),
       };
 
       set(state => ({

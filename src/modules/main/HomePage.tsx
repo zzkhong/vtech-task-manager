@@ -1,20 +1,37 @@
 import React from 'react';
-import {View, StyleSheet} from 'react-native';
+import {View, StyleSheet, TouchableOpacity} from 'react-native';
 
 import {Colors, Container, Typography} from 'styles';
 
 import Header from 'components/Header';
 import Palette from 'components/Palette';
+import useTaskStore from 'context/taskSlice';
+import useHomeStore from 'context/homeSlice';
+import BurgerIcon from 'assets/BurgerIcon';
 import EmptyContent from './shared/EmptyContent';
 import TaskContent from './shared/TaskContent';
-import useTaskStore from 'context/taskSlice';
 
 const HomePage: React.FC = () => {
   const {tasks} = useTaskStore();
+  const {setSidebarOn} = useHomeStore();
 
   return (
     <>
-      <Header title="TODO" />
+      <Header
+        headerLeft={
+          <TouchableOpacity
+            style={styles.headerLeft}
+            hitSlop={{
+              right: 12,
+              bottom: 12,
+            }}
+            onPress={() => setSidebarOn(true)}>
+            <BurgerIcon color={Colors.white} />
+          </TouchableOpacity>
+        }
+        title="TODO"
+        titleStyle={styles.headerTitle}
+      />
 
       <View style={styles.wrapper}>
         {tasks.length > 0 ? <TaskContent /> : <EmptyContent />}
@@ -33,6 +50,14 @@ const styles = StyleSheet.create({
   },
   headline: {
     ...Typography.headline,
+  },
+  headerTitle: {
+    textAlign: 'center',
+  },
+  headerLeft: {
+    position: 'absolute',
+    zIndex: 1,
+    left: 12,
   },
 });
 

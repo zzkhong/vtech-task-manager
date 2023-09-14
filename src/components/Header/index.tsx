@@ -10,9 +10,10 @@ import {Colors, Typography} from 'styles';
 interface HeaderProps extends ViewProps {
   title?: string;
   titleStyle?: TextStyle;
+  headerLeft: React.ReactNode;
 }
 
-const Header: React.FC<HeaderProps> = ({title, titleStyle}) => {
+const Header: React.FC<HeaderProps> = ({title, titleStyle, headerLeft}) => {
   const insets = useSafeAreaInsets();
   const {theme} = useThemeStore();
 
@@ -25,6 +26,7 @@ const Header: React.FC<HeaderProps> = ({title, titleStyle}) => {
           paddingTop: insets.top,
         },
       ]}>
+      <>{headerLeft}</>
       <Text style={[styles.title, titleStyle]}>{title}</Text>
     </View>
   );
@@ -32,6 +34,7 @@ const Header: React.FC<HeaderProps> = ({title, titleStyle}) => {
 
 const styles = StyleSheet.create({
   header: {
+    position: 'relative',
     flexDirection: 'row',
     height: 60,
     alignItems: 'center',
@@ -39,8 +42,13 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.headline,
     flex: 1,
-    textAlign: 'center',
     color: Colors.white,
+    paddingHorizontal: 12,
+  },
+  headerLeftCustom: {
+    position: 'absolute',
+    zIndex: 1,
+    borderWidth: 1,
   },
 });
 

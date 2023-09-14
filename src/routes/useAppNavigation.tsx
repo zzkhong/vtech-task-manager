@@ -2,7 +2,7 @@ import {NavigationProp, useNavigation} from '@react-navigation/native';
 
 const routes = {
   main_home_page: undefined,
-  main_detail_page: undefined,
+  main_detail_page: {},
 };
 
 export type RootRouteType = typeof routes;

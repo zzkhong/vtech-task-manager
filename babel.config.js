@@ -12,7 +12,7 @@ module.exports = {
           modules: './src/modules',
           routes: './src/routes',
           styles: './src/styles',
-          utils: './src/utils',
+          assets: './src/assets',
         },
       },
     ],

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, {useCallback, useRef, useState} from 'react';
 import {StyleSheet, View, ScrollView, TouchableOpacity} from 'react-native';
 import {RouteProp, useRoute} from '@react-navigation/native';
+import {useFocusEffect} from '@react-navigation/native';
 
 import {Colors, Container, Typography} from 'styles';
 import useAppNavigation from 'routes/useAppNavigation';
@@ -11,12 +12,76 @@ import Header from 'components/Header';
 import Text from 'components/Text';
 import {Task} from 'context/types';
 import Input from 'components/Input';
+import useTaskStore from 'context/taskSlice';
+import dayjs from 'dayjs';
 
 const DetailPage: React.FC = () => {
-  const navigation = useAppNavigation();
-  const {params: task} = useRoute<RouteProp<{params: Task}, 'params'>>();
+  const {tasks, removeTask, startTask, completeTask} = useTaskStore();
 
-  console.log(task);
+  const [task, setTask] = useState<Task>();
+  const [timer, setTimer] = useState<number>(0);
+  const [remark, setRemark] = useState<string>();
+
+  const navigation = useAppNavigation();
+  const {params} = useRoute<RouteProp<{params: {taskId: string}}, 'params'>>();
+
+  const timerRef = useRef<NodeJS.Timeout>();
+
+  const handleStartTask = () => {
+    if (task) {
+      const timestamp = dayjs().valueOf();
+
+      startTask(task.id, timestamp);
+
+      // Sync state task
+      setTask({
+        ...task,
+        status: 'running',
+        startAt: timestamp,
+      });
+
+      // start timer
+      timerRef.current = setInterval(() => {
+        setTimer(dayjs().valueOf() - (task?.startAt || timestamp));
+      }, 1000);
+    }
+  };
+
+  const handleRemoveTask = () => {
+    if (task?.id) {
+      removeTask(task?.id);
+      navigation.goBack();
+    }
+  };
+
+  const handleCompleteTask = () => {
+    if (task?.id) {
+      completeTask({
+        ...task,
+        remark,
+      });
+      navigation.goBack();
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      let cTask = tasks[params?.taskId];
+
+      if (cTask) {
+        setTask(cTask);
+
+        if (cTask.status === 'running') {
+          timerRef.current = setInterval(() => {
+            setTimer(dayjs().valueOf() - (cTask.startAt || 0));
+          }, 1000);
+        }
+      }
+
+      return () => clearInterval(timerRef.current);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
 
   return (
     <>
@@ -38,27 +103,55 @@ const DetailPage: React.FC = () => {
         <ScrollView contentContainerStyle={styles.container}>
           <View style={styles.row}>
             <Text>上层任务</Text>
-            <Text style={styles.value}>{task?.parent?.name || '无'}</Text>
+            <Text style={styles.value}>{task?.parentId || '无'}</Text>
           </View>
 
           <View style={styles.row}>
             <Text>进行时间</Text>
-            <Text style={styles.value}>{task?.parent?.name || '无'}</Text>
+            <TouchableOpacity onPress={handleStartTask}>
+              {/* 要优化，懒惰写 */}
+              {task?.completedAt ? (
+                <Text style={styles.value}>
+                  {dayjs(task.completedAt).format('mm 分 ss 秒')}
+                </Text>
+              ) : (
+                <Text style={styles.value}>
+                  {task?.status === 'running'
+                    ? dayjs(timer).format('mm 分 ss 秒')
+                    : '开始'}
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
 
           <View>
-            <Text>备注</Text>
+            <Text>备注*</Text>
             <Input
               multiline
               placeholder="输入备注"
               style={styles.input}
+              onChangeText={setRemark}
               textAlignVertical="top"
               defaultValue={task?.remark}
             />
           </View>
 
-          <Button style={styles.button}>完成</Button>
-          <Button style={styles.button} type="danger">
+          <Button
+            style={[
+              styles.button,
+              // eslint-disable-next-line react-native/no-inline-styles
+              {
+                display: task?.status === 'completed' ? 'none' : 'flex',
+              },
+            ]}
+            onPress={handleCompleteTask}
+            disabled={task?.status === undefined}>
+            完成
+          </Button>
+          <Button
+            style={styles.button}
+            type="danger"
+            onPress={handleRemoveTask}>
             删除
           </Button>
         </ScrollView>

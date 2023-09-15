@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useState, useRef} from 'react';
 import {
   StyleSheet,
   View,
@@ -6,58 +6,128 @@ import {
   FlatList,
   ListRenderItem,
 } from 'react-native';
+import {useFocusEffect} from '@react-navigation/native';
 
 import CustomInput from 'components/Input/CustomInput';
 import Text from 'components/Text';
 import useTaskStore from 'context/taskSlice';
 import Button from 'components/Button';
 import useThemeStore, {themeMapping} from 'context/themeSlice';
-import ArrowIcon from 'assets/arrowIcon';
+import ArrowIcon from 'assets/ArrowIcon';
 
 import {Colors, Container, Typography} from 'styles';
 import {Task} from 'context/types';
 import ListSeparator from './ListSeparator';
 import useAppNavigation from 'routes/useAppNavigation';
+import PlusIcon from 'assets/PlusIcon';
+import useHomeStore from 'context/homeSlice';
+import dayjs from 'dayjs';
 
 const TaskContent: React.FC = () => {
   const {tasks, addTask} = useTaskStore();
   const {theme} = useThemeStore();
+  const {statusFilter} = useHomeStore();
+
   const navigation = useAppNavigation();
 
-  const [searchMode, setSearchMode] = useState(true);
+  const [items, setItems] = useState<Task[]>();
+  const [timer, setTimer] = useState<number>(0);
+
+  const [editMode, setEditMode] = useState(false);
+
+  const timerRef = useRef<NodeJS.Timeout>();
+
+  // Initialize list item on focus
+  useFocusEffect(
+    useCallback(() => {
+      setItems(
+        Object.values(tasks).filter(item => {
+          switch (statusFilter) {
+            case 'completed':
+              return item.status === 'completed';
+            case 'incomplete':
+              return item.status !== 'completed';
+            default:
+              return item;
+          }
+        }),
+      );
+    }, [tasks, setItems, statusFilter]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      timerRef.current = setInterval(() => {
+        setTimer(dayjs().valueOf());
+      }, 1000);
+
+      return () => clearInterval(timerRef.current);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
 
   const renderButtonGroup = useCallback(
     (value: string) => {
-      return searchMode ? (
+      return !editMode ? (
         <Button>搜寻</Button>
       ) : (
         <>
           <Button onPress={() => addTask(value)} disabled={!value?.length}>
             新增
           </Button>
-          <Button type="neutral" onPress={() => setSearchMode(true)}>
+          <Button type="neutral" onPress={() => setEditMode(false)}>
             取消
           </Button>
         </>
       );
     },
-    [searchMode, addTask],
+    [editMode, addTask],
   );
 
   const renderTasksItem: ListRenderItem<Task> = ({item}) => {
+    const subTasks = Object.values(tasks).filter(i => i?.parentId === item?.id);
+
     return (
-      <View style={styles.listItem}>
-        <Text style={styles.listLabel}>{item.name}</Text>
+      <>
+        <View style={styles.listItem}>
+          <Text style={styles.listLabel}>{item.name}</Text>
 
-        <TouchableOpacity>
-          {<Text style={{color: themeMapping[theme].primaryColor}}>+</Text>}
-        </TouchableOpacity>
+          {!editMode && (
+            <TouchableOpacity onPress={() => setEditMode(true)}>
+              <PlusIcon />
+            </TouchableOpacity>
+          )}
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate('main_detail_page', item)}>
-          <ArrowIcon />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('main_detail_page', {taskId: item.id})
+            }>
+            <ArrowIcon />
+          </TouchableOpacity>
+        </View>
+        {item.status === 'running' && (
+          <View
+            style={[
+              styles.captionBar,
+              {
+                backgroundColor: themeMapping[theme].primaryColor,
+              },
+            ]}>
+            <Text style={styles.listCaption}>
+              {dayjs(timer - (item.startAt || 0)).format('mm 分 ss 秒')}
+            </Text>
+          </View>
+        )}
+
+        {/* Nested Flatlist */}
+        {subTasks.length > 0 && (
+          <FlatList
+            data={subTasks}
+            style={styles.list}
+            renderItem={renderTasksItem}
+          />
+        )}
+      </>
     );
   };
 
@@ -65,20 +135,20 @@ const TaskContent: React.FC = () => {
     <View style={styles.container}>
       <CustomInput
         style={styles.input}
-        placeholder={searchMode ? '输入事项名' : '输入子层事项名'}
+        placeholder={'输入事项名'}
         renderButtons={renderButtonGroup}
       />
 
       <FlatList
-        data={tasks}
+        data={items}
         renderItem={renderTasksItem}
         ItemSeparatorComponent={ListSeparator}
         style={styles.list}
         ListFooterComponent={
-          searchMode ? (
+          !editMode ? (
             <TouchableOpacity
               style={styles.footer}
-              onPress={() => setSearchMode(false)}>
+              onPress={() => setEditMode(true)}>
               <Text
                 style={[
                   styles.footerLabel,
@@ -120,6 +190,14 @@ const styles = StyleSheet.create({
   listLabel: {
     flexGrow: 1,
     color: Colors.textPrimary,
+  },
+  listCaption: {
+    flexGrow: 1,
+    color: Colors.white,
+  },
+  captionBar: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listItem: {
     flexGrow: 1,

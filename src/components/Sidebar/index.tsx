@@ -1,13 +1,23 @@
-import React, {useState, useEffect} from 'react';
-import {View, StyleSheet, Animated, Easing} from 'react-native';
+import React, {useState, useEffect, useMemo} from 'react';
+import {
+  View,
+  StyleSheet,
+  Animated,
+  Easing,
+  TouchableOpacity,
+} from 'react-native';
 import Text from 'components/Text';
 import useHomeStore from 'context/homeSlice';
 import {Colors, Typography} from 'styles';
+import useThemeStore, {themeMapping} from 'context/themeSlice';
 
 // 跟 Palette 组件一样， 没有 navigation
 // 单纯用来 filter 事项，所以不用 react-navigation
 const Sidebar: React.FC = () => {
-  const {sidebarOn, setSidebarOn} = useHomeStore();
+  const {sidebarOn, statusFilter, setSidebarOn, setStatusFilter} =
+    useHomeStore();
+  const {theme} = useThemeStore();
+
   const [translateX] = useState(new Animated.Value(-200));
 
   useEffect(() => {
@@ -20,6 +30,27 @@ const Sidebar: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sidebarOn]);
 
+  const buttonItems = useMemo(
+    () => [
+      {
+        key: 'all',
+        label: '所有事项',
+        onPress: () => setStatusFilter('all'),
+      },
+      {
+        key: 'completed',
+        label: '已完成事项',
+        onPress: () => setStatusFilter('completed'),
+      },
+      {
+        key: 'incomplete',
+        label: '未完成事项',
+        onPress: () => setStatusFilter('incomplete'),
+      },
+    ],
+    [setStatusFilter],
+  );
+
   return (
     <View
       // eslint-disable-next-line react-native/no-inline-styles
@@ -28,9 +59,22 @@ const Sidebar: React.FC = () => {
         <Animated.View style={[styles.sidebar, {transform: [{translateX}]}]}>
           <Text style={styles.title}>TODO</Text>
 
-          <Text>所有事项</Text>
-          <Text>已完成事项</Text>
-          <Text>未完成事项</Text>
+          {buttonItems.map(item => (
+            <TouchableOpacity
+              key={item.key}
+              onPress={item.onPress}
+              style={[
+                styles.button,
+                {
+                  backgroundColor:
+                    statusFilter === item.key
+                      ? themeMapping[theme].secondaryColor
+                      : Colors.white,
+                },
+              ]}>
+              <Text>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
         </Animated.View>
 
         <View style={styles.touchBox} onTouchEnd={() => setSidebarOn(false)} />
@@ -63,6 +107,10 @@ const styles = StyleSheet.create({
   },
   title: {
     ...Typography.headline,
+    paddingBottom: 12,
+  },
+  button: {
+    paddingVertical: 4,
   },
 });
 

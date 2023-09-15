@@ -34,7 +34,7 @@ const HomePage: React.FC = () => {
       />
 
       <View style={styles.wrapper}>
-        {tasks.length > 0 ? <TaskContent /> : <EmptyContent />}
+        {Object.keys(tasks).length > 0 ? <TaskContent /> : <EmptyContent />}
       </View>
 
       <Palette />

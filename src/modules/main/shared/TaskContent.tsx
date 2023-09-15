@@ -32,8 +32,9 @@ const TaskContent: React.FC = () => {
 
   const [items, setItems] = useState<Task[]>();
   const [timer, setTimer] = useState<number>(0);
+  const [query, setQuery] = useState<string>('');
 
-  const [editMode, setEditMode] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout>();
 
@@ -41,18 +42,20 @@ const TaskContent: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       setItems(
-        Object.values(tasks).filter(item => {
-          switch (statusFilter) {
-            case 'completed':
-              return item.status === 'completed';
-            case 'incomplete':
-              return item.status !== 'completed';
-            default:
-              return item;
-          }
-        }),
+        Object.values(tasks)
+          .filter(item => item.name.includes(query.trim()))
+          .filter(item => {
+            switch (statusFilter) {
+              case 'completed':
+                return item.status === 'completed';
+              case 'incomplete':
+                return item.status !== 'completed';
+              default:
+                return item;
+            }
+          }),
       );
-    }, [tasks, setItems, statusFilter]),
+    }, [query, tasks, setItems, statusFilter]),
   );
 
   useFocusEffect(
@@ -62,27 +65,25 @@ const TaskContent: React.FC = () => {
       }, 1000);
 
       return () => clearInterval(timerRef.current);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
 
-  const renderButtonGroup = useCallback(
-    (value: string) => {
-      return !editMode ? (
-        <Button>搜寻</Button>
-      ) : (
-        <>
-          <Button onPress={() => addTask(value)} disabled={!value?.length}>
-            新增
-          </Button>
-          <Button type="neutral" onPress={() => setEditMode(false)}>
-            取消
-          </Button>
-        </>
-      );
-    },
-    [editMode, addTask],
-  );
+  const renderButtonGroup = (value: string) => {
+    return editId === null ? (
+      <Button onPress={() => setQuery(value)}>搜寻</Button>
+    ) : (
+      <>
+        <Button
+          onPress={() => addTask(value, editId)}
+          disabled={!value?.length}>
+          新增
+        </Button>
+        <Button type="neutral" onPress={() => setEditId(null)}>
+          取消
+        </Button>
+      </>
+    );
+  };
 
   const renderTasksItem: ListRenderItem<Task> = ({item}) => {
     const subTasks = Object.values(tasks).filter(i => i?.parentId === item?.id);
@@ -90,10 +91,12 @@ const TaskContent: React.FC = () => {
     return (
       <>
         <View style={styles.listItem}>
-          <Text style={styles.listLabel}>{item.name}</Text>
+          <TouchableOpacity style={styles.listRow}>
+            <Text style={styles.listLabel}>{`+ ${item.name}`}</Text>
+          </TouchableOpacity>
 
-          {!editMode && (
-            <TouchableOpacity onPress={() => setEditMode(true)}>
+          {editId === null && (
+            <TouchableOpacity onPress={() => setEditId(item.id)}>
               <PlusIcon />
             </TouchableOpacity>
           )}
@@ -123,7 +126,13 @@ const TaskContent: React.FC = () => {
         {subTasks.length > 0 && (
           <FlatList
             data={subTasks}
-            style={styles.list}
+            style={[
+              styles.list,
+              // eslint-disable-next-line react-native/no-inline-styles
+              item.parentId !== undefined && {
+                paddingLeft: 12,
+              },
+            ]}
             renderItem={renderTasksItem}
           />
         )}
@@ -140,15 +149,15 @@ const TaskContent: React.FC = () => {
       />
 
       <FlatList
-        data={items}
+        data={items?.filter(item => item.parentId === undefined)}
         renderItem={renderTasksItem}
         ItemSeparatorComponent={ListSeparator}
         style={styles.list}
         ListFooterComponent={
-          !editMode ? (
+          editId === null ? (
             <TouchableOpacity
               style={styles.footer}
-              onPress={() => setEditMode(true)}>
+              onPress={() => setEditId('')}>
               <Text
                 style={[
                   styles.footerLabel,
@@ -187,8 +196,11 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingVertical: 12,
   },
-  listLabel: {
+  listRow: {
     flexGrow: 1,
+    justifyContent: 'center',
+  },
+  listLabel: {
     color: Colors.textPrimary,
   },
   listCaption: {

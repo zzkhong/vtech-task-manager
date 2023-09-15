@@ -11,7 +11,7 @@ import {Task} from './types';
 // 不过在 flatlist 转化成 array 会有一些吃力（如果数据量太大）
 interface TaskState {
   tasks: Record<string, Task>;
-  addTask: (taskName: string) => void;
+  addTask: (taskName: string, parentId?: string) => void;
   removeTask: (taskId: string) => void;
   startTask: (taskId: string, timestamp: number) => void;
   completeTask: (task: Task) => void;
@@ -21,11 +21,12 @@ const useTaskStore = create(
   immer<TaskState>(set => ({
     tasks: {},
 
-    addTask: taskName => {
+    addTask: (taskName, parentId) => {
       if (taskName) {
         const newTask: Task = {
           id: uuid.v4().toString(),
           name: taskName,
+          parentId: parentId || undefined,
         };
 
         return set(state => ({

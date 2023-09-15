@@ -103,7 +103,10 @@ const DetailPage: React.FC = () => {
         <ScrollView contentContainerStyle={styles.container}>
           <View style={styles.row}>
             <Text>上层任务</Text>
-            <Text style={styles.value}>{task?.parentId || '无'}</Text>
+            <Text style={styles.value}>
+              {(task?.parentId !== undefined && tasks[task?.parentId].name) ||
+                '无'}
+            </Text>
           </View>
 
           <View style={styles.row}>

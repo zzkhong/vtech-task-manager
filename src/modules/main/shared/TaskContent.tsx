@@ -39,24 +39,47 @@ const TaskContent: React.FC = () => {
 
   const timerRef = useRef<NodeJS.Timeout>();
 
-  // Initialize list item on focus
+  // 优化会把它移到 utils, 懒惰
   useFocusEffect(
     useCallback(() => {
-      // 过滤的事项
-      setItems(
-        Object.values(tasks)
-          .filter(item => item.name.includes(query.trim()))
-          .filter(item => {
-            switch (statusFilter) {
-              case 'completed':
-                return item.status === 'completed';
-              case 'incomplete':
-                return item.status !== 'completed';
-              default:
-                return item;
-            }
-          }),
+      // 过滤 和 搜引 可能有冲突（子集完成，母集未完成）
+      // 过滤
+      const filteredByCategory = Object.values(tasks).filter(item => {
+        switch (statusFilter) {
+          case 'completed':
+            return item.status === 'completed';
+          case 'incomplete':
+            return item.status !== 'completed';
+          default:
+            return item;
+        }
+      });
+
+      // 搜引
+      const filteredByQuery = filteredByCategory.filter(item =>
+        item.name.includes(query.trim()),
       );
+
+      // 因为母集有可能没有 query 的字眼，所以会加回去
+      if (query) {
+        const parentTasks: Record<string, Task> = {};
+        let pids = filteredByQuery.map(i => i.parentId).filter(i => !!i);
+
+        while (pids.length > 0) {
+          const newParentIds = [];
+          for (let id of pids) {
+            if (id && !parentTasks[id]) {
+              parentTasks[id] = tasks[id];
+              newParentIds.push(tasks[id].parentId);
+            }
+          }
+          pids = newParentIds;
+        }
+
+        setItems([...filteredByQuery, ...Object.values(parentTasks)]);
+      } else {
+        setItems(filteredByQuery);
+      }
     }, [query, tasks, setItems, statusFilter]),
   );
 

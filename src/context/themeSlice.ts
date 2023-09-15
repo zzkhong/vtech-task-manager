@@ -1,4 +1,6 @@
 import {create} from 'zustand';
+import {createJSONStorage, persist} from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {ThemeColorMap, ThemeType} from './types';
 import {Colors} from 'styles';
@@ -31,13 +33,21 @@ export const themeMapping: Record<ThemeType, ThemeColorMap> = {
   },
 };
 
-const useThemeStore = create<ThemeState>(set => ({
-  theme: 'blue',
+const useThemeStore = create(
+  persist<ThemeState>(
+    set => ({
+      theme: 'blue',
 
-  setTheme: (newTheme: ThemeType) =>
-    set(() => ({
-      theme: newTheme,
-    })),
-}));
+      setTheme: (newTheme: ThemeType) =>
+        set(() => ({
+          theme: newTheme,
+        })),
+    }),
+    {
+      name: 'theme-persist',
+      storage: createJSONStorage(() => AsyncStorage),
+    },
+  ),
+);
 
 export default useThemeStore;

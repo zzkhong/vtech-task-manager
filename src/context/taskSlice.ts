@@ -1,5 +1,6 @@
 import {create} from 'zustand';
-import {immer} from 'zustand/middleware/immer';
+import {createJSONStorage, persist} from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import dayjs from 'dayjs';
 import uuid from 'react-native-uuid';
@@ -18,76 +19,79 @@ interface TaskState {
 }
 
 const useTaskStore = create(
-  immer<TaskState>(set => ({
-    tasks: {},
+  persist<TaskState>(
+    set => ({
+      tasks: {},
 
-    addTask: (taskName, parentId) => {
-      if (taskName) {
-        const newTask: Task = {
-          id: uuid.v4().toString(),
-          name: taskName,
-          parentId: parentId || undefined,
-        };
-
-        return set(state => ({
-          tasks: {
-            ...state.tasks,
-            [newTask.id]: newTask,
-          },
-        }));
-      }
-    },
-
-    removeTask: taskId => {
-      return set(state => {
-        if (state.tasks[taskId]) {
-          const newTasks = {...state.tasks};
-          delete newTasks[taskId];
-
-          return {
-            tasks: newTasks,
+      addTask: (taskName, parentId) => {
+        if (taskName) {
+          const newTask: Task = {
+            id: uuid.v4().toString(),
+            name: taskName,
+            parentId: parentId || undefined,
           };
-        }
-      });
-    },
 
-    startTask: (taskId, timestamp) => {
-      return set(state => {
-        if (state.tasks[taskId]) {
-          const dTask = {...state.tasks};
-          const task: Task = {
-            ...dTask[taskId],
-            status: 'running',
-            startAt: timestamp,
+          return set(state => ({
+            tasks: {
+              ...state.tasks,
+              [newTask.id]: newTask,
+            },
+          }));
+        }
+      },
+
+      removeTask: taskId =>
+        set(state => {
+          if (state.tasks[taskId]) {
+            const newTasks = {...state.tasks};
+            delete newTasks[taskId];
+
+            return {
+              tasks: newTasks,
+            };
+          }
+        }),
+
+      startTask: (taskId, timestamp) =>
+        set(state => {
+          if (state.tasks[taskId]) {
+            const dTask = {...state.tasks};
+            const task: Task = {
+              ...dTask[taskId],
+              status: 'running',
+              startAt: timestamp,
+            };
+
+            return {
+              tasks: {
+                ...dTask,
+                [task.id]: task,
+              },
+            };
+          }
+        }),
+
+      completeTask: (task: Task) =>
+        set(state => {
+          const newTask: Task = {
+            ...task,
+            status: 'completed',
+            completedAt: dayjs().valueOf() - (task.startAt || 0),
           };
 
           return {
             tasks: {
-              ...dTask,
-              [task.id]: task,
+              ...state.tasks,
+              [newTask.id]: newTask,
             },
           };
-        }
-      });
+        }),
+    }),
+    {
+      name: 'task-persist',
+      storage: createJSONStorage(() => AsyncStorage),
     },
-
-    completeTask: (task: Task) => {
-      return set(state => {
-        const newTask: Task = {
-          ...task,
-          status: 'completed',
-          completedAt: dayjs().valueOf() - (task.startAt || 0),
-        };
-
-        return {
-          tasks: {
-            ...state.tasks,
-            [newTask.id]: newTask,
-          },
-        };
-      });
-    },
-  })),
+  ),
 );
 
 export default useTaskStore;

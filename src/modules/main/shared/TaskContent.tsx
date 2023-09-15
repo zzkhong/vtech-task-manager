@@ -33,6 +33,7 @@ const TaskContent: React.FC = () => {
   const [items, setItems] = useState<Task[]>();
   const [timer, setTimer] = useState<number>(0);
   const [query, setQuery] = useState<string>('');
+  const [collapsed, setCollapsed] = useState<string[]>([]);
 
   const [editId, setEditId] = useState<string | null>(null);
 
@@ -41,6 +42,7 @@ const TaskContent: React.FC = () => {
   // Initialize list item on focus
   useFocusEffect(
     useCallback(() => {
+      // 过滤的事项
       setItems(
         Object.values(tasks)
           .filter(item => item.name.includes(query.trim()))
@@ -68,6 +70,14 @@ const TaskContent: React.FC = () => {
     }, []),
   );
 
+  const toggleCollapsible = (id: string) => {
+    if (collapsed.includes(id)) {
+      setCollapsed(collapsed.filter(item => item !== id));
+    } else {
+      setCollapsed([...collapsed, id]);
+    }
+  };
+
   const renderButtonGroup = (value: string) => {
     return editId === null ? (
       <Button onPress={() => setQuery(value)}>搜寻</Button>
@@ -86,13 +96,17 @@ const TaskContent: React.FC = () => {
   };
 
   const renderTasksItem: ListRenderItem<Task> = ({item}) => {
-    const subTasks = Object.values(tasks).filter(i => i?.parentId === item?.id);
+    const subTasks = items?.filter(i => i?.parentId === item?.id);
 
     return (
       <>
         <View style={styles.listItem}>
-          <TouchableOpacity style={styles.listRow}>
-            <Text style={styles.listLabel}>{`+ ${item.name}`}</Text>
+          <TouchableOpacity
+            style={styles.listRow}
+            onPress={() => toggleCollapsible(item.id)}>
+            <Text style={styles.listLabel}>{`${
+              collapsed.includes(item.id) ? '-' : '+'
+            } ${item.name}`}</Text>
           </TouchableOpacity>
 
           {editId === null && (
@@ -122,18 +136,17 @@ const TaskContent: React.FC = () => {
           </View>
         )}
 
-        {/* Nested Flatlist */}
-        {subTasks.length > 0 && (
+        {subTasks && subTasks?.length > 0 && !collapsed.includes(item.id) && (
           <FlatList
             data={subTasks}
+            renderItem={renderTasksItem}
             style={[
               styles.list,
-              // eslint-disable-next-line react-native/no-inline-styles
-              item.parentId !== undefined && {
-                paddingLeft: 12,
+              styles.sublist,
+              {
+                borderColor: themeMapping[theme].primaryColor,
               },
             ]}
-            renderItem={renderTasksItem}
           />
         )}
       </>
@@ -149,6 +162,7 @@ const TaskContent: React.FC = () => {
       />
 
       <FlatList
+        // 主事项
         data={items?.filter(item => item.parentId === undefined)}
         renderItem={renderTasksItem}
         ItemSeparatorComponent={ListSeparator}
@@ -194,7 +208,11 @@ const styles = StyleSheet.create({
   },
   list: {
     width: '100%',
-    paddingVertical: 12,
+    paddingVertical: 8,
+  },
+  sublist: {
+    paddingLeft: 12,
+    borderTopWidth: 1,
   },
   listRow: {
     flexGrow: 1,
